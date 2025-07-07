@@ -24,24 +24,35 @@
 1. **创建 KV**
    - Workers & Pages → KV → Create a namespace
    - 名称: `TEMP_MAILS`
-   - 记录命名空间 ID
+   - 记录命名空间 ID: `435fdf61f77c4f02950cd20ff71bef1a`
 
-### 3. 配置 Pages 环境
+### 3. 配置 Pages 环境（通过 Dashboard）
 
 1. **进入 Pages 项目设置**
    - Pages → temp-mail-system → Settings
 
-2. **添加环境变量**
-   ```
-   AUTH_TOKEN = your-secret-token (可选)
-   DOMAIN = your-domain.com
-   EPIN = your-epin (可选)
-   ```
-
-3. **绑定 KV 命名空间**
-   - Functions → KV namespace bindings
+2. **绑定 KV 命名空间**
+   - Settings → Functions → KV namespace bindings
+   - 点击 "添加" 或 "Add binding"
    - 变量名: `TEMP_MAILS`
-   - KV 命名空间: 选择 `TEMP_MAILS`
+   - KV 命名空间: 选择 `TEMP_MAILS` (ID: 435fdf61f77c4f02950cd20ff71bef1a)
+   - 点击 "保存" 或 "Save"
+
+3. **添加环境变量**
+   - Settings → Environment variables → 变量和机密
+   - 点击 "添加" 或 "Add variable"
+   - 添加以下变量：
+     ```
+     AUTH_TOKEN = your-secret-token (可选，API 认证)
+     DOMAIN = your-domain.com (您的域名)
+     EPIN = your-epin (可选，访问密码)
+     ```
+   - 每个变量添加后点击 "保存" 或 "Save"
+
+### 4. 重新部署
+
+- 配置完成后，点击 "Deployments" → "Retry deployment"
+- 或者推送任意代码更改触发重新部署
 
 ### 4. 部署 Email Worker
 

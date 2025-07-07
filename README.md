@@ -19,9 +19,32 @@
 - **KV 存储** - 邮件数据持久化存储
 - **管理界面** (`public/index.html`) - 系统状态和 API 文档
 
-## 🚀 部署步骤
+## 🚀 快速部署
 
-### 1. 准备工作
+### 方法一：一键部署脚本（推荐）
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/skymun016/temp-mail-system.git
+cd temp-mail-system
+
+# 2. 安装依赖
+npm install
+
+# 3. 登录 Cloudflare
+npx wrangler login
+
+# 4. 快速设置（自动创建 KV 命名空间）
+npm run setup
+
+# 5. 根据提示更新配置文件，然后部署
+npm run deploy:dev    # 部署到开发环境
+npm run deploy:prod   # 部署到生产环境
+```
+
+### 方法二：手动部署
+
+#### 1. 准备工作
 
 ```bash
 # 安装依赖
@@ -31,17 +54,17 @@ npm install
 npx wrangler login
 ```
 
-### 2. 创建 KV 命名空间
+#### 2. 创建 KV 命名空间
 
 ```bash
 # 创建生产环境 KV
-npx wrangler kv:namespace create "TEMP_MAILS"
+npm run kv:create
 
 # 创建预览环境 KV
-npx wrangler kv:namespace create "TEMP_MAILS" --preview
+npm run kv:create:preview
 ```
 
-### 3. 配置 wrangler.toml
+#### 3. 配置 wrangler.toml
 
 更新 `wrangler.toml` 文件中的配置：
 
@@ -61,14 +84,16 @@ AUTH_TOKEN = "your-secret-auth-token"  # 可选，API 认证
 DOMAIN = "your-domain.com"             # 你的域名
 ```
 
-### 4. 部署 Email Worker
+#### 4. 部署 Email Worker
 
 ```bash
 # 部署邮件接收 Worker
-npx wrangler deploy email-worker.js --name temp-mail-email-worker
+npm run deploy:email
+# 或者
+npx wrangler deploy email-worker.js --name temp-mail-email-worker --config email-worker.toml
 ```
 
-### 5. 配置域名邮件路由
+#### 5. 配置域名邮件路由
 
 在 Cloudflare Dashboard 中：
 
@@ -79,23 +104,43 @@ npx wrangler deploy email-worker.js --name temp-mail-email-worker
    - **操作**: Send to Worker
    - **Worker**: `temp-mail-email-worker`
 
-### 6. 部署 Pages 项目
+#### 6. 部署 Pages 项目
 
 ```bash
 # 部署到 Cloudflare Pages
+npm run deploy:pages
+# 或者
 npx wrangler pages deploy public --project-name=temp-mail-system
-
-# 或者连接到 Git 仓库进行自动部署
 ```
 
-### 7. 配置 Pages 环境变量
+#### 7. 配置 Pages 环境变量
 
 在 Cloudflare Pages 设置中添加：
 
 - **KV 绑定**: `TEMP_MAILS` → 你的 KV 命名空间
-- **环境变量**: 
+- **环境变量**:
   - `AUTH_TOKEN` (可选)
   - `DOMAIN`
+
+### 方法三：GitHub Actions 自动部署
+
+1. **设置 GitHub Secrets**
+
+在 GitHub 仓库设置中添加以下 Secrets：
+
+```
+CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
+```
+
+2. **推送代码触发部署**
+
+```bash
+git add .
+git commit -m "Update configuration"
+git push origin main
+```
+
+GitHub Actions 将自动部署 Email Worker 和 Pages 项目。
 
 ## 📡 API 接口
 

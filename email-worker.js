@@ -65,17 +65,40 @@ async function parseEmail(message) {
     try {
         // 获取邮件主题
         const subject = message.headers.get('subject') || '';
-        
+
         // 读取邮件原始内容
         const rawEmail = await streamToString(message.raw);
-        
+
         // 解析邮件正文
         const emailParts = parseRawEmail(rawEmail);
-        
+
+        // 尝试解码 Base64 内容
+        let decodedText = emailParts.text;
+        let decodedHtml = emailParts.html;
+
+        // 检查是否为 Base64 编码
+        if (emailParts.text && isBase64(emailParts.text)) {
+            try {
+                decodedText = atob(emailParts.text);
+                console.log('✅ 成功解码 Base64 文本内容');
+            } catch (e) {
+                console.log('⚠️ Base64 解码失败，使用原始内容');
+            }
+        }
+
+        if (emailParts.html && isBase64(emailParts.html)) {
+            try {
+                decodedHtml = atob(emailParts.html);
+                console.log('✅ 成功解码 Base64 HTML 内容');
+            } catch (e) {
+                console.log('⚠️ HTML Base64 解码失败，使用原始内容');
+            }
+        }
+
         return {
             subject: subject,
-            text: emailParts.text || '',
-            html: emailParts.html || ''
+            text: decodedText || '',
+            html: decodedHtml || ''
         };
     } catch (error) {
         console.error('解析邮件失败:', error);
@@ -252,10 +275,33 @@ function isValidVerificationCode(code) {
 }
 
 /**
+ * 检查字符串是否为 Base64 编码
+ */
+function isBase64(str) {
+    if (!str || str.length === 0) return false;
+
+    // Base64 字符串长度必须是 4 的倍数
+    if (str.length % 4 !== 0) return false;
+
+    // Base64 只包含 A-Z, a-z, 0-9, +, /, = 字符
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(str)) return false;
+
+    // 尝试解码，如果成功且包含可打印字符，则认为是 Base64
+    try {
+        const decoded = atob(str);
+        // 检查解码后的内容是否包含可打印字符
+        return /[\u0020-\u007E\u4e00-\u9fff]/.test(decoded);
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
  * 生成邮件ID
  */
 function generateMailId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
 }
 
 /**

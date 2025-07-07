@@ -19,128 +19,83 @@
 - **KV 存储** - 邮件数据持久化存储
 - **管理界面** (`public/index.html`) - 系统状态和 API 文档
 
-## 🚀 快速部署
+## 🚀 部署步骤
 
-### 方法一：一键部署脚本（推荐）
+### 1. Cloudflare Pages 部署（推荐）
 
-```bash
-# 1. 克隆仓库
-git clone https://github.com/skymun016/temp-mail-system.git
-cd temp-mail-system
+#### 步骤 1：连接 GitHub 仓库
 
-# 2. 安装依赖
-npm install
+1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
+2. 进入 **Pages** 页面
+3. 点击 **"Create a project"**
+4. 选择 **"Connect to Git"**
+5. 选择 GitHub 并授权访问
+6. 选择 `temp-mail-system` 仓库
 
-# 3. 登录 Cloudflare
-npx wrangler login
+#### 步骤 2：配置构建设置
 
-# 4. 快速设置（自动创建 KV 命名空间）
-npm run setup
+- **项目名称**: `temp-mail-system`
+- **生产分支**: `main`
+- **构建命令**: `npm run build`（可留空）
+- **构建输出目录**: `public`
 
-# 5. 根据提示更新配置文件，然后部署
-npm run deploy:dev    # 部署到开发环境
-npm run deploy:prod   # 部署到生产环境
-```
-
-### 方法二：手动部署
-
-#### 1. 准备工作
-
-```bash
-# 安装依赖
-npm install
-
-# 登录 Cloudflare
-npx wrangler login
-```
-
-#### 2. 创建 KV 命名空间
-
-```bash
-# 创建生产环境 KV
-npm run kv:create
-
-# 创建预览环境 KV
-npm run kv:create:preview
-```
-
-#### 3. 配置 wrangler.toml
-
-更新 `wrangler.toml` 文件中的配置：
-
-```toml
-# 替换为你的 Account ID
-account_id = "your-account-id"
-
-# 替换为实际的 KV 命名空间 ID
-[[kv_namespaces]]
-binding = "TEMP_MAILS"
-id = "your-kv-namespace-id"
-preview_id = "your-preview-kv-namespace-id"
-
-# 配置环境变量
-[vars]
-AUTH_TOKEN = "your-secret-auth-token"  # 可选，API 认证
-DOMAIN = "your-domain.com"             # 你的域名
-```
-
-#### 4. 部署 Email Worker
-
-```bash
-# 部署邮件接收 Worker
-npm run deploy:email
-# 或者
-npx wrangler deploy email-worker.js --name temp-mail-email-worker --config email-worker.toml
-```
-
-#### 5. 配置域名邮件路由
+#### 步骤 3：创建 KV 命名空间
 
 在 Cloudflare Dashboard 中：
 
-1. 进入你的域名管理页面
-2. 点击 "Email" 选项卡
-3. 添加邮件路由规则：
+1. 进入 **Workers & Pages** → **KV**
+2. 点击 **"Create a namespace"**
+3. 命名空间名称: `TEMP_MAILS`
+4. 记录生成的命名空间 ID
+
+#### 步骤 4：配置 Pages 环境变量
+
+在 Pages 项目设置中添加：
+
+**环境变量**:
+- `AUTH_TOKEN`: `your-secret-token`（可选）
+- `DOMAIN`: `your-domain.com`
+- `EPIN`: `your-epin`（可选）
+
+**KV 命名空间绑定**:
+- 变量名: `TEMP_MAILS`
+- KV 命名空间: 选择刚创建的 `TEMP_MAILS`
+
+### 2. Email Worker 部署
+
+#### 步骤 1：创建 Email Worker
+
+1. 在 Cloudflare Dashboard 进入 **Workers & Pages**
+2. 点击 **"Create application"** → **"Create Worker"**
+3. 命名: `temp-mail-email-worker`
+4. 点击 **"Deploy"**
+
+#### 步骤 2：上传 Worker 代码
+
+1. 在 Worker 编辑器中，复制 `email-worker.js` 的内容
+2. 粘贴到编辑器中
+3. 点击 **"Save and Deploy"**
+
+#### 步骤 3：配置 Worker 环境
+
+在 Worker 设置中：
+
+**环境变量**:
+- `DOMAIN`: `your-domain.com`
+
+**KV 命名空间绑定**:
+- 变量名: `TEMP_MAILS`
+- KV 命名空间: 选择之前创建的 `TEMP_MAILS`
+
+### 3. 配置域名邮件路由
+
+1. 在 Cloudflare Dashboard 进入你的域名
+2. 点击 **"Email"** 选项卡
+3. 点击 **"Email Routing"** → **"Enable"**
+4. 添加路由规则：
    - **匹配表达式**: `*@your-domain.com`
-   - **操作**: Send to Worker
+   - **操作**: **Send to Worker**
    - **Worker**: `temp-mail-email-worker`
-
-#### 6. 部署 Pages 项目
-
-```bash
-# 部署到 Cloudflare Pages
-npm run deploy:pages
-# 或者
-npx wrangler pages deploy public --project-name=temp-mail-system
-```
-
-#### 7. 配置 Pages 环境变量
-
-在 Cloudflare Pages 设置中添加：
-
-- **KV 绑定**: `TEMP_MAILS` → 你的 KV 命名空间
-- **环境变量**:
-  - `AUTH_TOKEN` (可选)
-  - `DOMAIN`
-
-### 方法三：GitHub Actions 自动部署
-
-1. **设置 GitHub Secrets**
-
-在 GitHub 仓库设置中添加以下 Secrets：
-
-```
-CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
-```
-
-2. **推送代码触发部署**
-
-```bash
-git add .
-git commit -m "Update configuration"
-git push origin main
-```
-
-GitHub Actions 将自动部署 Email Worker 和 Pages 项目。
 
 ## 📡 API 接口
 

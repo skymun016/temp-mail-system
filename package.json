@@ -4,16 +4,8 @@
   "description": "独立的临时邮箱系统，基于 Cloudflare Email Workers + KV 存储",
   "main": "index.js",
   "scripts": {
-    "dev": "wrangler pages dev public --compatibility-date=2024-01-01",
-    "setup": "./scripts/setup.sh",
-    "deploy": "./scripts/deploy.sh",
-    "deploy:dev": "./scripts/deploy.sh development",
-    "deploy:prod": "./scripts/deploy.sh production",
-    "deploy:email": "wrangler deploy email-worker.js --name temp-mail-email-worker --config email-worker.toml",
-    "deploy:pages": "wrangler pages deploy public --project-name temp-mail-system",
-    "kv:create": "wrangler kv:namespace create TEMP_MAILS",
-    "kv:create:preview": "wrangler kv:namespace create TEMP_MAILS --preview",
     "build": "echo 'No build step required'",
+    "dev": "wrangler pages dev public",
     "test": "echo 'No tests specified'"
   },
   "keywords": [

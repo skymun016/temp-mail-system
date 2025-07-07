@@ -26,10 +26,7 @@ export default {
             
             // 解析邮件内容
             const emailData = await parseEmail(message);
-            
-            // 提取验证码
-            const verificationCode = extractVerificationCode(emailData.text, emailData.html);
-            
+
             // 构建邮件记录
             const mailRecord = {
                 id: generateMailId(),
@@ -38,7 +35,6 @@ export default {
                 subject: emailData.subject,
                 text: emailData.text,
                 html: emailData.html,
-                verificationCode: verificationCode,
                 timestamp: Date.now(),
                 read: false
             };
@@ -49,7 +45,7 @@ export default {
             console.log('✅ 邮件处理完成:', {
                 id: mailRecord.id,
                 to: mailRecord.to,
-                verificationCode: verificationCode
+                subject: mailRecord.subject
             });
             
         } catch (error) {
@@ -72,33 +68,10 @@ async function parseEmail(message) {
         // 解析邮件正文
         const emailParts = parseRawEmail(rawEmail);
 
-        // 尝试解码 Base64 内容
-        let decodedText = emailParts.text;
-        let decodedHtml = emailParts.html;
-
-        // 检查是否为 Base64 编码
-        if (emailParts.text && isBase64(emailParts.text)) {
-            try {
-                decodedText = atob(emailParts.text);
-                console.log('✅ 成功解码 Base64 文本内容');
-            } catch (e) {
-                console.log('⚠️ Base64 解码失败，使用原始内容');
-            }
-        }
-
-        if (emailParts.html && isBase64(emailParts.html)) {
-            try {
-                decodedHtml = atob(emailParts.html);
-                console.log('✅ 成功解码 Base64 HTML 内容');
-            } catch (e) {
-                console.log('⚠️ HTML Base64 解码失败，使用原始内容');
-            }
-        }
-
         return {
             subject: subject,
-            text: decodedText || '',
-            html: decodedHtml || ''
+            text: emailParts.text || '',
+            html: emailParts.html || ''
         };
     } catch (error) {
         console.error('解析邮件失败:', error);
@@ -257,73 +230,7 @@ function parseRawEmail(rawEmail) {
     };
 }
 
-/**
- * 提取验证码 - 兼容现有油猴脚本的格式
- */
-function extractVerificationCode(text, html) {
-    const content = (text + ' ' + html).replace(/<[^>]*>/g, ' '); // 移除HTML标签
-    
-    // 验证码模式匹配（按优先级排序）
-    const patterns = [
-        // 6位数字验证码（最常见的格式）
-        /(?:验证码|verification code|verify code|code)[：:\s]*(\d{6})/i,
-        /(\d{6})(?:\s*(?:is|为|是)?\s*(?:your|您的)?\s*(?:verification|verify)?\s*(?:code|码))/i,
-        
-        // 独立的6位数字（与现有脚本兼容）
-        /(?<![a-zA-Z@.])\b(\d{6})\b/,
-        
-        // 4位数字验证码
-        /(?:验证码|verification code|verify code|code)[：:\s]*(\d{4})/i,
-        /(\d{4})(?:\s*(?:is|为|是)?\s*(?:your|您的)?\s*(?:verification|verify)?\s*(?:code|码))/i,
-        /(?<![a-zA-Z@.])\b(\d{4})\b/,
-        
-        // 8位数字验证码
-        /(?:验证码|verification code|verify code|code)[：:\s]*(\d{8})/i,
-        /(\d{8})(?:\s*(?:is|为|是)?\s*(?:your|您的)?\s*(?:verification|verify)?\s*(?:code|码))/i,
-        /(?<![a-zA-Z@.])\b(\d{8})\b/,
-        
-        // 字母数字混合验证码
-        /(?:验证码|verification code|verify code|code)[：:\s]*([A-Z0-9]{6,8})/i,
-        /([A-Z0-9]{6,8})(?:\s*(?:is|为|是)?\s*(?:your|您的)?\s*(?:verification|verify)?\s*(?:code|码))/i
-    ];
-    
-    for (const pattern of patterns) {
-        const match = content.match(pattern);
-        if (match) {
-            const code = match[1];
-            // 验证码合理性检查
-            if (isValidVerificationCode(code)) {
-                console.log('✅ 提取到验证码:', code);
-                return code;
-            }
-        }
-    }
-    
-    console.log('⚠️ 未找到验证码');
-    return null;
-}
-
-/**
- * 验证码合理性检查
- */
-function isValidVerificationCode(code) {
-    // 排除明显不是验证码的数字
-    const excludePatterns = [
-        /^0+$/, // 全零
-        /^1+$/, // 全一
-        /^(19|20)\d{2}$/, // 年份
-        /^(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$/, // 日期格式MMDD
-        /^[0-9]{10,}$/, // 超长数字（可能是时间戳等）
-    ];
-    
-    for (const pattern of excludePatterns) {
-        if (pattern.test(code)) {
-            return false;
-        }
-    }
-    
-    return true;
-}
+// 验证码提取逻辑已移至油猴脚本中处理
 
 /**
  * 解码 Quoted-Printable 编码
@@ -341,28 +248,7 @@ function decodeQuotedPrintable(str) {
         .trim();
 }
 
-/**
- * 检查字符串是否为 Base64 编码
- */
-function isBase64(str) {
-    if (!str || str.length === 0) return false;
-
-    // Base64 字符串长度必须是 4 的倍数
-    if (str.length % 4 !== 0) return false;
-
-    // Base64 只包含 A-Z, a-z, 0-9, +, /, = 字符
-    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-    if (!base64Regex.test(str)) return false;
-
-    // 尝试解码，如果成功且包含可打印字符，则认为是 Base64
-    try {
-        const decoded = atob(str);
-        // 检查解码后的内容是否包含可打印字符
-        return /[\u0020-\u007E\u4e00-\u9fff]/.test(decoded);
-    } catch (e) {
-        return false;
-    }
-}
+// Base64 检测函数已移除，不再需要
 
 /**
  * 生成邮件ID
@@ -392,25 +278,14 @@ async function storeEmail(env, mailRecord) {
             from: mailRecord.from,
             subject: mailRecord.subject,
             timestamp: mailRecord.timestamp,
-            read: mailRecord.read,
-            hasVerificationCode: !!mailRecord.verificationCode
+            read: mailRecord.read
         });
         
         // 只保留最近50封邮件
         inbox = inbox.slice(0, 50);
         
         await env.TEMP_MAILS.put(indexKey, JSON.stringify(inbox));
-        
-        // 如果有验证码，创建快速访问索引
-        if (mailRecord.verificationCode) {
-            const codeKey = `code:${mailRecord.to}:latest`;
-            await env.TEMP_MAILS.put(codeKey, JSON.stringify({
-                code: mailRecord.verificationCode,
-                mailId: mailRecord.id,
-                timestamp: mailRecord.timestamp
-            }), { expirationTtl: 600 }); // 10分钟过期
-        }
-        
+
         console.log('✅ 邮件存储完成');
         
     } catch (error) {

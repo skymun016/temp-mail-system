@@ -1,0 +1,24 @@
+{
+  "name": "temp-mail-system",
+  "version": "1.0.0",
+  "description": "独立的临时邮箱系统，基于 Cloudflare Email Workers + KV 存储",
+  "main": "index.js",
+  "scripts": {
+    "dev": "wrangler pages dev public --compatibility-date=2024-01-01",
+    "deploy": "wrangler pages deploy public --project-name=temp-mail-system",
+    "build": "echo 'No build step required'",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "cloudflare",
+    "email",
+    "temporary",
+    "verification",
+    "api"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

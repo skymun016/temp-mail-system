@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>临时邮箱系统 - Temp Mail System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .api-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .api-endpoint {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border-left: 4px solid #667eea;
+        }
+
+        .api-endpoint h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .api-endpoint code {
+            background: #e9ecef;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            display: block;
+            margin: 0.5rem 0;
+            word-break: break-all;
+        }
+
+        .api-endpoint .method {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .method.get { background: #28a745; color: white; }
+        .method.delete { background: #dc3545; color: white; }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .feature p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #e8f5e8;
+            border-radius: 12px;
+            color: #2d5a2d;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background: #28a745;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .deployment-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .deployment-info h3 {
+            color: #856404;
+            margin-bottom: 1rem;
+        }
+
+        .deployment-info ol {
+            color: #856404;
+            padding-left: 1.5rem;
+        }
+
+        .deployment-info li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 临时邮箱系统</h1>
+            <p>基于 Cloudflare Email Workers + KV 存储的独立临时邮箱服务</p>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 1.5rem; color: #333;">🚀 API 接口文档</h2>
+            
+            <div class="api-info">
+                <div class="api-endpoint">
+                    <h3>📋 获取邮件列表</h3>
+                    <div>
+                        <span class="method get">GET</span>
+                        <code>/api/mails?email={email}&limit=20</code>
+                    </div>
+                    <p><strong>参数：</strong></p>
+                    <ul>
+                        <li><code>email</code> - 邮箱地址（必需）</li>
+                        <li><code>limit</code> - 返回数量限制（可选，默认20）</li>
+                    </ul>
+                </div>
+
+                <div class="api-endpoint">
+                    <h3>📄 获取邮件详情</h3>
+                    <div>
+                        <span class="method get">GET</span>
+                        <code>/api/mails/{mailId}?email={email}</code>
+                    </div>
+                    <p><strong>参数：</strong></p>
+                    <ul>
+                        <li><code>mailId</code> - 邮件ID（路径参数）</li>
+                        <li><code>email</code> - 邮箱地址（必需）</li>
+                    </ul>
+                </div>
+
+                <div class="api-endpoint">
+                    <h3>🗑️ 删除邮件</h3>
+                    <div>
+                        <span class="method delete">DELETE</span>
+                        <code>/api/mails</code>
+                    </div>
+                    <p><strong>Form Data：</strong></p>
+                    <ul>
+                        <li><code>email</code> - 邮箱地址</li>
+                        <li><code>first_id</code> - 要删除的邮件ID</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 style="margin-bottom: 1.5rem; color: #333;">✨ 系统特性</h2>
+            
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h3>API 兼容</h3>
+                    <p>完全兼容 tempmail.plus API 格式，无需修改现有代码</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <h3>智能提取</h3>
+                    <p>自动识别和提取多种格式的验证码</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h3>实时处理</h3>
+                    <p>基于 Cloudflare Email Workers 实时接收邮件</p>
+                </div>
+
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <h3>安全可靠</h3>
+                    <p>数据存储在 Cloudflare KV，安全可靠</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="deployment-info">
+                <h3>📋 部署说明</h3>
+                <ol>
+                    <li>在 Cloudflare Dashboard 创建 Email Worker，上传 <code>email-worker.js</code></li>
+                    <li>创建 KV 命名空间 <code>TEMP_MAILS</code> 并绑定到 Worker</li>
+                    <li>配置域名 MX 记录指向 Cloudflare</li>
+                    <li>部署 Pages 项目：<code>wrangler pages deploy public</code></li>
+                    <li>在 Pages 设置中绑定 KV 命名空间</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="status">
+            <div class="status-dot"></div>
+            <span><strong>系统状态：</strong> 准备就绪，等待部署</span>
+        </div>
+    </div>
+</body>
+</html>

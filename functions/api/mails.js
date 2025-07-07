@@ -34,15 +34,25 @@ export async function onRequestGet(context) {
             // return jsonResponse({ error: 'Unauthorized' }, 401);
         }
         
-        // 路由处理
+        // 路由处理 - 添加调试信息
         const pathParts = pathname.split('/');
         const mailId = pathParts[pathParts.length - 1];
-        
+
+        console.log('🔍 路由调试:', {
+            pathname,
+            pathParts,
+            mailId,
+            isMailsList: pathname.endsWith('/mails') || mailId === 'mails',
+            isMailDetail: mailId && mailId !== 'mails'
+        });
+
         if (pathname.endsWith('/mails') || mailId === 'mails') {
             // 获取邮件列表
+            console.log('📋 处理邮件列表请求');
             return await handleGetMails(url, env);
         } else if (mailId && mailId !== 'mails') {
             // 获取单封邮件详情
+            console.log('📄 处理邮件详情请求, mailId:', mailId);
             return await handleGetMail(mailId, url, env);
         }
         
@@ -178,17 +188,22 @@ async function handleGetMails(url, env) {
  */
 async function handleGetMail(mailId, url, env) {
     const email = url.searchParams.get('email');
-    
+
+    console.log('📄 获取邮件详情:', { mailId, email });
+
     if (!email) {
-        return jsonResponse({ 
-            result: false, 
-            error: 'Email parameter required' 
+        console.log('❌ 缺少 email 参数');
+        return jsonResponse({
+            result: false,
+            error: 'Email parameter required'
         }, 400);
     }
-    
+
     try {
         const mailKey = `mail:${mailId}`;
+        console.log('🔑 查找邮件 key:', mailKey);
         const mailData = await env.TEMP_MAILS.get(mailKey);
+        console.log('📦 KV 返回数据:', mailData ? '有数据' : '无数据');
         
         if (!mailData) {
             return jsonResponse({ 

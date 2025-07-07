@@ -10,6 +10,12 @@
  */
 
 export default {
+    async fetch(request, env, ctx) {
+        return new Response('Email Worker is running! This worker only processes emails.', {
+            headers: { 'Content-Type': 'text/plain' }
+        });
+    },
+
     async email(message, env, ctx) {
         try {
             console.log('📧 收到新邮件:', {

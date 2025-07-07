@@ -34,29 +34,9 @@ export async function onRequestGet(context) {
             // return jsonResponse({ error: 'Unauthorized' }, 401);
         }
         
-        // 路由处理 - 添加调试信息
-        const pathParts = pathname.split('/');
-        const mailId = pathParts[pathParts.length - 1];
-
-        console.log('🔍 路由调试:', {
-            pathname,
-            pathParts,
-            mailId,
-            isMailsList: pathname.endsWith('/mails') || mailId === 'mails',
-            isMailDetail: mailId && mailId !== 'mails'
-        });
-
-        if (pathname.endsWith('/mails') || mailId === 'mails') {
-            // 获取邮件列表
-            console.log('📋 处理邮件列表请求');
-            return await handleGetMails(url, env);
-        } else if (mailId && mailId !== 'mails') {
-            // 获取单封邮件详情
-            console.log('📄 处理邮件详情请求, mailId:', mailId);
-            return await handleGetMail(mailId, url, env);
-        }
-        
-        return jsonResponse({ error: 'Not found' }, 404);
+        // 只处理邮件列表请求，邮件详情由 [mailId].js 处理
+        console.log('📋 处理邮件列表请求');
+        return await handleGetMails(url, env);
         
     } catch (error) {
         console.error('API Error:', error);
@@ -172,83 +152,7 @@ async function handleGetMails(url, env) {
     }
 }
 
-/**
- * 获取单封邮件详情
- * GET /api/mails/{mailId}?email=xxx&epin=xxx
- * 
- * 兼容 tempmail.plus API 格式：
- * {
- *   "result": true,
- *   "id": "mail_id",
- *   "from": "sender@example.com",
- *   "subject": "Subject",
- *   "text": "Plain text content",
- *   "html": "HTML content"
- * }
- */
-async function handleGetMail(mailId, url, env) {
-    const email = url.searchParams.get('email');
-
-    console.log('📄 获取邮件详情:', { mailId, email });
-
-    if (!email) {
-        console.log('❌ 缺少 email 参数');
-        return jsonResponse({
-            result: false,
-            error: 'Email parameter required'
-        }, 400);
-    }
-
-    try {
-        const mailKey = `mail:${mailId}`;
-        console.log('🔑 查找邮件 key:', mailKey);
-        const mailData = await env.TEMP_MAILS.get(mailKey);
-        console.log('📦 KV 返回数据:', mailData ? '有数据' : '无数据');
-        
-        if (!mailData) {
-            return jsonResponse({ 
-                result: false, 
-                error: 'Mail not found' 
-            }, 404);
-        }
-        
-        const mail = JSON.parse(mailData);
-        
-        // 验证邮件是否属于请求的邮箱
-        if (mail.to !== email) {
-            return jsonResponse({ 
-                result: false, 
-                error: 'Mail not found' 
-            }, 404);
-        }
-        
-        // 标记为已读
-        mail.read = true;
-        await env.TEMP_MAILS.put(mailKey, JSON.stringify(mail));
-        
-        // 更新收件箱索引中的已读状态
-        await updateInboxReadStatus(env, email, mailId);
-        
-        // 返回 tempmail.plus 兼容格式
-        return jsonResponse({
-            result: true,
-            id: mail.id,
-            from: mail.from,
-            to: mail.to,
-            subject: mail.subject,
-            text: mail.text,
-            html: mail.html,
-            timestamp: mail.timestamp
-        });
-        
-    } catch (error) {
-        console.error('Get mail error:', error);
-        return jsonResponse({
-            result: false,
-            error: 'Failed to get mail'
-        }, 500);
-    }
-}
+// 邮件详情处理已移至 /api/mails/[mailId].js
 
 /**
  * 删除邮件

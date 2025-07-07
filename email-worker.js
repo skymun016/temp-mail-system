@@ -137,7 +137,16 @@ async function streamToString(stream) {
         offset += chunk.length;
     }
     
-    return new TextDecoder('utf-8').decode(uint8Array);
+    // 尝试不同的编码方式
+    try {
+        return new TextDecoder('utf-8').decode(uint8Array);
+    } catch (e) {
+        try {
+            return new TextDecoder('utf-8', { fatal: false }).decode(uint8Array);
+        } catch (e2) {
+            return new TextDecoder('latin1').decode(uint8Array);
+        }
+    }
 }
 
 /**
@@ -150,7 +159,8 @@ function parseRawEmail(rawEmail) {
     let text = '';
     let html = '';
     let boundary = '';
-    
+    let currentEncoding = '';
+
     // 查找边界标识
     const boundaryMatch = rawEmail.match(/boundary[=:][\s]*["']?([^"'\s;]+)/i);
     if (boundaryMatch) {
@@ -165,11 +175,13 @@ function parseRawEmail(rawEmail) {
                 inHeaders = false;
                 continue;
             }
-            // 检查内容类型
+            // 检查内容类型和编码
             if (line.toLowerCase().includes('content-type: text/html')) {
                 currentPart = 'html';
             } else if (line.toLowerCase().includes('content-type: text/plain')) {
                 currentPart = 'text';
+            } else if (line.toLowerCase().includes('content-transfer-encoding:')) {
+                currentEncoding = line.split(':')[1].trim().toLowerCase();
             }
         } else {
             // 处理多部分邮件
@@ -184,13 +196,22 @@ function parseRawEmail(rawEmail) {
             } else if (line.toLowerCase().includes('content-type: text/plain')) {
                 currentPart = 'text';
                 continue;
+            } else if (line.toLowerCase().includes('content-transfer-encoding:')) {
+                currentEncoding = line.split(':')[1].trim().toLowerCase();
+                continue;
             }
-            
+
             // 跳过其他头部信息
             if (line.toLowerCase().startsWith('content-')) {
                 continue;
             }
             
+            // 跳过 charset 等头部信息行
+            if (line.toLowerCase().startsWith('charset=') ||
+                line.trim() === '' && (text === '' && html === '')) {
+                continue;
+            }
+
             // 添加到相应部分
             if (currentPart === 'html') {
                 html += line + '\n';
@@ -200,9 +221,39 @@ function parseRawEmail(rawEmail) {
         }
     }
     
-    return { 
-        text: text.trim(), 
-        html: html.trim() 
+    // 根据编码方式解码内容
+    let decodedText = text.trim();
+    let decodedHtml = html.trim();
+
+    if (currentEncoding === 'base64') {
+        try {
+            if (decodedText) decodedText = atob(decodedText);
+            if (decodedHtml) decodedHtml = atob(decodedHtml);
+        } catch (e) {
+            console.log('Base64 解码失败:', e);
+        }
+    } else if (currentEncoding === 'quoted-printable') {
+        // 处理 Quoted-Printable 编码
+        decodedText = decodeQuotedPrintable(decodedText);
+        decodedHtml = decodeQuotedPrintable(decodedHtml);
+    }
+
+    // 通用清理：移除开头的编码信息和多余的换行
+    decodedText = decodedText
+        .replace(/^charset=[^\r\n]*\r?\n\r?\n/i, '')
+        .replace(/=\r?\n/g, '')
+        .replace(/=$/gm, '')
+        .trim();
+
+    decodedHtml = decodedHtml
+        .replace(/^charset=[^\r\n]*\r?\n\r?\n/i, '')
+        .replace(/=\r?\n/g, '')
+        .replace(/=$/gm, '')
+        .trim();
+
+    return {
+        text: decodedText,
+        html: decodedHtml
     };
 }
 
@@ -272,6 +323,22 @@ function isValidVerificationCode(code) {
     }
     
     return true;
+}
+
+/**
+ * 解码 Quoted-Printable 编码
+ */
+function decodeQuotedPrintable(str) {
+    if (!str) return str;
+
+    return str
+        .replace(/=\r?\n/g, '') // 移除软换行
+        .replace(/=([0-9A-F]{2})/gi, (_, hex) => {
+            return String.fromCharCode(parseInt(hex, 16));
+        })
+        .replace(/^charset=[^\r\n]*\r?\n\r?\n/i, '') // 移除开头的 charset 信息
+        .replace(/=$/gm, '') // 移除行尾的 = 号
+        .trim();
 }
 
 /**
